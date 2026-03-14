@@ -115,6 +115,20 @@
     .btn-cancel { background: #f5f6fa; color: #666; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
     .btn-confirm { background: #667eea; color: white; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; cursor: pointer; font-weight: 600; }
 
+    /* タップ遅延除去・フィードバック */
+    button, .occasion-item, .checkbox-custom, .btn-add-occasion, .btn-add-item { touch-action: manipulation; }
+    .occasion-item:active { opacity: 0.65; transition: opacity 0.1s; }
+    button:active { opacity: 0.7; transform: scale(0.97); transition: opacity 0.1s, transform 0.1s; }
+    .checkbox-custom:active { transform: scale(0.9); transition: transform 0.1s; }
+
+    /* アニメーション */
+    @keyframes itemIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes itemOut { to { opacity: 0; transform: translateX(16px); } }
+    @keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-5px); } 40%,80% { transform: translateX(5px); } }
+    .item-new { animation: itemIn 0.18s ease forwards; }
+    .item-removing { animation: itemOut 0.15s ease forwards; pointer-events: none; }
+    .input-shake { animation: shake 0.35s ease; }
+
     /* モバイル */
     .btn-mobile-back { background: none; border: none; color: white; cursor: pointer; padding: 4px; margin-right: 8px; display: none; align-items: center; }
     @media (max-width: 640px) {
@@ -228,6 +242,10 @@ function renderSidebar() {
       </div>
     `;
   }).join('');
+  requestAnimationFrame(() => {
+    const active = document.querySelector('.occasion-item.active');
+    if (active) active.scrollIntoView({ block: 'nearest' });
+  });
 }
 
 function renderMain() {
@@ -413,7 +431,6 @@ function goBack() {
 
 function deleteOccasion(e, id) {
   e.stopPropagation();
-  if (!confirm('この用事を削除しますか？')) return;
   data = data.filter(o => o.id !== id);
   if (selectedId === id) selectedId = null;
   save(); render();
@@ -439,20 +456,35 @@ function toggleItem(idx) {
 }
 
 function deleteItem(idx) {
-  const o = getOccasion(selectedId);
-  o.items.splice(idx, 1);
-  save(); render();
+  const el = document.querySelectorAll('.checklist-item')[idx];
+  if (el) {
+    el.classList.add('item-removing');
+    setTimeout(() => { const o = getOccasion(selectedId); o.items.splice(idx, 1); save(); render(); }, 150);
+  } else {
+    const o = getOccasion(selectedId); o.items.splice(idx, 1); save(); render();
+  }
 }
 
 function addItem() {
   const input = document.getElementById('newItemInput');
   const name = input.value.trim();
-  if (!name) return;
+  if (!name) {
+    input.classList.remove('input-shake');
+    void input.offsetWidth;
+    input.classList.add('input-shake');
+    return;
+  }
   input.value = '';
   const o = getOccasion(selectedId);
   o.items.push({ name, checked: false });
   save(); render();
-  document.getElementById('newItemInput').focus();
+  const items = document.querySelectorAll('.checklist-item');
+  if (items.length) {
+    const last = items[items.length - 1];
+    last.classList.add('item-new');
+    last.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  document.getElementById('newItemInput')?.focus();
 }
 
 function resetAll() {
@@ -478,7 +510,11 @@ function openEditModal(e, id) {
   document.getElementById('modalConfirmBtn').textContent = '保存';
   document.getElementById('occasionNameInput').value = o.name;
   document.getElementById('modalOverlay').classList.remove('hidden');
-  setTimeout(() => document.getElementById('occasionNameInput').focus(), 100);
+  setTimeout(() => {
+    const inp = document.getElementById('occasionNameInput');
+    inp.focus();
+    inp.select();
+  }, 100);
 }
 
 function closeModal() { document.getElementById('modalOverlay').classList.add('hidden'); }
@@ -494,6 +530,7 @@ function confirmOccasion() {
     data.push(newOccasion);
     save(); closeModal();
     selectedId = newOccasion.id;
+    if (window.innerWidth <= 640) document.body.classList.add('mobile-detail');
     render();
   }
 }
