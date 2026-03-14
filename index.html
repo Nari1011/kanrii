@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>カンリイ</title>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #1a1a2e; min-height: 100vh; transition: background 0.2s, color 0.2s; }
+
+    /* ダークモード */
+    body.dark { background: #0f1117; color: #e8eaf0; }
+    body.dark .sidebar { background: #1a1d27; border-color: #2a2d3a; }
+    body.dark .sidebar-header { border-color: #2a2d3a; }
+    body.dark .sidebar-header span { color: #aaa; }
+    body.dark .occasion-item { border-color: #2a2d3a; }
+    body.dark .occasion-item:hover { background: #22253200; background: #222535; }
+    body.dark .occasion-item.active { background: #2a2d4a; }
+    body.dark .occasion-name { color: #e8eaf0; }
+    body.dark .occasion-count { color: #666; }
+    body.dark .main { background: #0f1117; }
+    body.dark .checklist-item { background: #1a1d27; box-shadow: none; }
+    body.dark .add-item-form { background: #1a1d27; box-shadow: none; }
+    body.dark .add-item-form input { background: #22253a; border-color: #2a2d3a; color: #e8eaf0; }
+    body.dark .add-item-form input::placeholder { color: #555; }
+    body.dark .btn-reset { background: #1a1d27; color: #667eea; border-color: #667eea; }
+    body.dark .btn-reset:hover { background: #2a2d4a; }
+    body.dark .progress-bar-wrap { background: #2a2d3a; }
+    body.dark .modal-overlay .modal { background: #1a1d27; }
+    body.dark .form-group input { background: #22253a; border-color: #2a2d3a; color: #e8eaf0; }
+    body.dark .form-group label { color: #aaa; }
+    body.dark .btn-cancel { background: #22253a; color: #aaa; }
+    body.dark .item-text { color: #e8eaf0; }
+    body.dark .item-text.checked { color: #555; }
+    body.dark .checkbox-custom { border-color: #3a3d50; }
+    body.dark .item-delete { color: #888; }
+    body.dark .empty-state { color: #444; }
+    body.dark .empty-state .icon { color: #333; }
+
+    header { background: #667eea; color: white; padding: 14px 24px; box-shadow: 0 2px 8px rgba(102,126,234,0.4); display: flex; align-items: center; }
+    header h1 { font-size: 20px; font-weight: 700; flex: 1; }
+    .btn-dark { background: rgba(255,255,255,0.15); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; transition: background 0.15s; }
+    .btn-dark:hover { background: rgba(255,255,255,0.25); }
+
+    .app { display: flex; height: calc(100vh - 56px); }
+    .sidebar { width: 260px; min-width: 260px; background: white; border-right: 1px solid #e8eaf0; display: flex; flex-direction: column; overflow: hidden; }
+    .sidebar-header { padding: 16px; border-bottom: 1px solid #e8eaf0; display: flex; align-items: center; gap: 8px; }
+    .sidebar-header span { font-size: 13px; font-weight: 600; color: #666; flex: 1; }
+    .btn-add-occasion { background: #667eea; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 13px; cursor: pointer; white-space: nowrap; transition: background 0.2s; }
+    .btn-add-occasion:hover { background: #5a6fd8; }
+    .occasion-list { overflow-y: auto; flex: 1; }
+    .occasion-item { padding: 14px 16px; cursor: pointer; border-bottom: 1px solid #f0f2f5; display: flex; align-items: center; gap: 10px; transition: background 0.15s; position: relative; }
+    .occasion-item:hover { background: #f7f8fc; }
+    .occasion-item.active { background: #eef0fd; border-left: 3px solid #667eea; }
+    .occasion-item.active .occasion-name { color: #667eea; font-weight: 600; }
+    .occasion-info { flex: 1; min-width: 0; }
+    .occasion-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .occasion-count { font-size: 11px; color: #999; margin-top: 2px; }
+    .occasion-delete, .occasion-edit { opacity: 0; background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; transition: all 0.15s; display: flex; align-items: center; }
+    .occasion-delete { color: #bbb; }
+    .occasion-edit { color: #bbb; }
+    .occasion-item:hover .occasion-delete,
+    .occasion-item:hover .occasion-edit { opacity: 1; }
+    .occasion-delete:hover { color: #e74c3c; background: #fdf0f0; }
+    .occasion-edit:hover { color: #667eea; background: #eef0fd; }
+
+    .main { flex: 1; overflow-y: auto; padding: 24px; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #bbb; text-align: center; }
+    .empty-state .icon { margin-bottom: 16px; color: #ccc; }
+    .empty-state p { font-size: 15px; }
+
+    .checklist-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .checklist-title { font-size: 22px; font-weight: 700; }
+    .checklist-subtitle { font-size: 13px; color: #999; margin-top: 2px; }
+    .checklist-actions { margin-left: auto; }
+    .btn-reset { background: white; color: #667eea; border: 1.5px solid #667eea; border-radius: 6px; padding: 7px 14px; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+    .btn-reset:hover { background: #eef0fd; }
+
+    .progress-text { font-size: 12px; color: #888; margin-bottom: 8px; }
+    .progress-bar-wrap { background: #eee; border-radius: 8px; height: 8px; margin-bottom: 20px; overflow: hidden; }
+    .progress-bar { height: 100%; background: #667eea; border-radius: 8px; transition: width 0.3s ease, background 0.3s ease; }
+    .progress-bar.complete { background: #27ae60; }
+
+    .add-item-form { display: flex; gap: 8px; margin-bottom: 20px; background: white; border-radius: 10px; padding: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .add-item-form input { flex: 1; border: 1.5px solid #e0e3ef; border-radius: 6px; padding: 8px 12px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+    .add-item-form input:focus { border-color: #667eea; }
+    .btn-add-item { background: #667eea; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 14px; cursor: pointer; white-space: nowrap; transition: background 0.2s; }
+    .btn-add-item:hover { background: #5a6fd8; }
+
+    .items-list { display: flex; flex-direction: column; gap: 8px; }
+    .checklist-item { background: white; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); transition: opacity 0.2s; }
+    .checklist-item.checked { opacity: 0.55; }
+    .checkbox-custom { width: 22px; height: 22px; border: 2px solid #d0d3e0; border-radius: 6px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 13px; }
+    .checkbox-custom.checked { background: #667eea; border-color: #667eea; color: white; }
+    .item-text { flex: 1; font-size: 14px; cursor: pointer; user-select: none; }
+    .item-text.checked { text-decoration: line-through; color: #bbb; }
+    .item-delete { opacity: 0; background: none; border: none; color: #333; cursor: pointer; padding: 4px; border-radius: 4px; transition: all 0.15s; display: flex; align-items: center; }
+    .checklist-item:hover .item-delete { opacity: 1; }
+    .item-delete:hover { color: #e74c3c; background: #fdf0f0; }
+    .no-items { text-align: center; color: #ccc; padding: 40px; font-size: 14px; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-overlay.hidden { display: none; }
+    .modal { background: white; border-radius: 14px; padding: 28px; width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    .modal h2 { font-size: 18px; margin-bottom: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
+    .form-group input { width: 100%; border: 1.5px solid #e0e3ef; border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+    .form-group input:focus { border-color: #667eea; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .btn-cancel { background: #f5f6fa; color: #666; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
+    .btn-confirm { background: #667eea; color: white; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; cursor: pointer; font-weight: 600; }
+
+    /* モバイル */
+    .btn-mobile-back { display: none; background: none; border: none; color: white; cursor: pointer; padding: 4px; margin-right: 8px; display: none; align-items: center; }
+    @media (max-width: 640px) {
+      .app { display: block; height: calc(100vh - 52px); overflow: hidden; }
+      header { padding: 12px 16px; }
+      /* 一覧表示: サイドバーのみ */
+      .sidebar { width: 100%; height: 100%; border-right: none; }
+      .main { width: 100%; height: 100%; padding: 16px 16px 80px; }
+      /* 画面切り替え */
+      body:not(.mobile-detail) .main { display: none; }
+      body.mobile-detail .sidebar { display: none; }
+      body.mobile-detail .btn-mobile-back { display: flex; }
+      /* タッチターゲット拡大 */
+      .occasion-item { padding: 16px; min-height: 64px; }
+      .occasion-delete, .occasion-edit { opacity: 1; padding: 8px; }
+      .checklist-item { padding: 16px; }
+      .checkbox-custom { width: 28px; height: 28px; font-size: 15px; }
+      .item-delete { opacity: 1; padding: 8px; }
+      /* 入力フォームを画面下部に固定 */
+      .add-item-form { position: fixed; bottom: 0; left: 0; right: 0; margin: 0; border-radius: 0; border-top: 1px solid #e8eaf0; padding: 12px 16px; z-index: 100; }
+      body.dark .add-item-form { border-top-color: #2a2d3a; }
+      /* モーダル幅 */
+      .modal { width: calc(100vw - 32px); padding: 24px; }
+      /* サイドバーのヘッダー */
+      .sidebar-header { padding: 16px; }
+      .btn-add-occasion { padding: 8px 16px; font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <button class="btn-mobile-back" id="mobileBackBtn" onclick="goBack()"><i data-lucide="arrow-left" style="width:22px;height:22px"></i></button>
+  <h1>カンリイ</h1>
+  <button class="btn-dark" onclick="toggleDark()" id="darkBtn"><i data-lucide="moon" style="width:16px;height:16px"></i></button>
+</header>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span>用事一覧</span>
+      <button class="btn-add-occasion" onclick="openAddModal()">＋ 追加</button>
+    </div>
+    <div class="occasion-list" id="occasionList"></div>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">用事を追加</h2>
+    <div class="form-group">
+      <label>用事の名前</label>
+      <input type="text" id="occasionNameInput" placeholder="例：旅行、出張、ジム..." maxlength="20"
+        onkeydown="if(event.key==='Enter'&&!event.isComposing)confirmOccasion()">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="btn-confirm" id="modalConfirmBtn" onclick="confirmOccasion()">追加</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let data = JSON.parse(localStorage.getItem('kanrii-data') || '[]');
+let selectedId = null;
+let editingId = null;
+
+function toggleDark() {
+  const isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('kanrii-dark', isDark ? '1' : '');
+  document.getElementById('darkBtn').innerHTML = isDark
+    ? '<i data-lucide="sun" style="width:16px;height:16px"></i>'
+    : '<i data-lucide="moon" style="width:16px;height:16px"></i>';
+  lucide.createIcons();
+}
+if (localStorage.getItem('kanrii-dark')) {
+  document.body.classList.add('dark');
+  document.getElementById('darkBtn').innerHTML = '<i data-lucide="sun" style="width:16px;height:16px"></i>';
+}
+
+function save() {
+  localStorage.setItem('kanrii-data', JSON.stringify(data));
+}
+
+function getOccasion(id) { return data.find(o => o.id === id); }
+
+function renderSidebar() {
+  const list = document.getElementById('occasionList');
+  if (data.length === 0) {
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:#ccc;font-size:13px;">用事がありません</div>';
+    return;
+  }
+  list.innerHTML = data.map(o => {
+    const total = o.items.length;
+    const checked = o.items.filter(i => i.checked).length;
+    return `
+      <div class="occasion-item ${o.id === selectedId ? 'active' : ''}" onclick="selectOccasion('${o.id}')">
+        <div class="occasion-info">
+          <div class="occasion-name">${escHtml(o.name)}</div>
+          <div class="occasion-count">${total === 0 ? 'アイテムなし' : `${checked} / ${total} 完了`}</div>
+        </div>
+        <button class="occasion-edit" onclick="openEditModal(event,'${o.id}')"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
+        <button class="occasion-delete" onclick="deleteOccasion(event,'${o.id}')"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderMain() {
+  const main = document.getElementById('main');
+  if (!selectedId) {
+    main.innerHTML = `<div class="empty-state"><div class="icon"><i data-lucide="arrow-left" style="width:64px;height:64px"></i></div><p>左から用事を選んでください</p></div>`;
+    return;
+  }
+  const o = getOccasion(selectedId);
+  if (!o) { selectedId = null; renderMain(); return; }
+  const total = o.items.length;
+  const checked = o.items.filter(i => i.checked).length;
+  const pct = total === 0 ? 0 : Math.round(checked / total * 100);
+
+  main.innerHTML = `
+    <div class="checklist-header">
+      <div>
+        <div class="checklist-title">${escHtml(o.name)}</div>
+        <div class="checklist-subtitle">${total}アイテム</div>
+      </div>
+      <div class="checklist-actions">
+        <button class="btn-reset" onclick="resetAll()">全てリセット</button>
+      </div>
+    </div>
+    <div class="progress-text">${checked} / ${total} 完了 (${pct}%)</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" style="width:0%" data-pct="${pct}"></div>
+    </div>
+    <div class="add-item-form">
+      <input type="text" id="newItemInput" placeholder="持ち物を追加..." maxlength="40"
+        onkeydown="if(event.key==='Enter'&&!event.isComposing)addItem()">
+      <button class="btn-add-item" onclick="addItem()">追加</button>
+    </div>
+    <div class="items-list" id="itemsList">
+      ${total === 0
+        ? '<div class="no-items">持ち物を追加してみよう！</div>'
+        : o.items.map((item, idx) => `
+          <div class="checklist-item ${item.checked ? 'checked' : ''}">
+            <div class="checkbox-custom ${item.checked ? 'checked' : ''}" onclick="toggleItem(${idx})">
+              ${item.checked ? '✓' : ''}
+            </div>
+            <span class="item-text ${item.checked ? 'checked' : ''}" onclick="toggleItem(${idx})">${escHtml(item.name)}</span>
+            <button class="item-delete" onclick="deleteItem(${idx})"><i data-lucide="trash-2" style="width:16px;height:16px"></i></button>
+          </div>
+        `).join('')
+      }
+    </div>
+  `;
+}
+
+function render() {
+  renderSidebar();
+  renderMain();
+  lucide.createIcons();
+  const bar = document.querySelector('.progress-bar');
+  if (bar) requestAnimationFrame(() => { bar.style.width = bar.dataset.pct + '%'; bar.classList.toggle('complete', bar.dataset.pct === '100'); });
+}
+
+function selectOccasion(id) {
+  selectedId = id;
+  if (window.innerWidth <= 640) document.body.classList.add('mobile-detail');
+  render();
+}
+
+function goBack() {
+  document.body.classList.remove('mobile-detail');
+  render();
+}
+
+function deleteOccasion(e, id) {
+  e.stopPropagation();
+  if (!confirm('この用事を削除しますか？')) return;
+  data = data.filter(o => o.id !== id);
+  if (selectedId === id) selectedId = null;
+  save(); render();
+}
+
+function toggleItem(idx) {
+  const o = getOccasion(selectedId);
+  o.items[idx].checked = !o.items[idx].checked;
+  save();
+  const item = document.querySelectorAll('.checklist-item')[idx];
+  const checked = o.items[idx].checked;
+  item.classList.toggle('checked', checked);
+  const box = item.querySelector('.checkbox-custom');
+  box.classList.toggle('checked', checked);
+  box.textContent = checked ? '✓' : '';
+  item.querySelector('.item-text').classList.toggle('checked', checked);
+  const total = o.items.length;
+  const doneCount = o.items.filter(i => i.checked).length;
+  const pct = total === 0 ? 0 : Math.round(doneCount / total * 100);
+  document.querySelector('.progress-text').textContent = `${doneCount} / ${total} 完了 (${pct}%)`;
+  const bar = document.querySelector('.progress-bar');
+  bar.style.width = pct + '%';
+  bar.classList.toggle('complete', pct === 100);
+  renderSidebar(); lucide.createIcons();
+}
+
+function deleteItem(idx) {
+  const o = getOccasion(selectedId);
+  o.items.splice(idx, 1);
+  save(); render();
+}
+
+function addItem() {
+  const input = document.getElementById('newItemInput');
+  const name = input.value.trim();
+  if (!name) return;
+  input.value = '';
+  const o = getOccasion(selectedId);
+  o.items.push({ name, checked: false });
+  save(); render();
+  document.getElementById('newItemInput').focus();
+}
+
+function resetAll() {
+  const o = getOccasion(selectedId);
+  o.items.forEach(i => i.checked = false);
+  save(); render();
+}
+
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = '用事を追加';
+  document.getElementById('modalConfirmBtn').textContent = '追加';
+  document.getElementById('occasionNameInput').value = '';
+  document.getElementById('modalOverlay').classList.remove('hidden');
+  setTimeout(() => document.getElementById('occasionNameInput').focus(), 100);
+}
+
+function openEditModal(e, id) {
+  e.stopPropagation();
+  editingId = id;
+  const o = getOccasion(id);
+  document.getElementById('modalTitle').textContent = '用事を編集';
+  document.getElementById('modalConfirmBtn').textContent = '保存';
+  document.getElementById('occasionNameInput').value = o.name;
+  document.getElementById('modalOverlay').classList.remove('hidden');
+  setTimeout(() => document.getElementById('occasionNameInput').focus(), 100);
+}
+
+function closeModal() { document.getElementById('modalOverlay').classList.add('hidden'); }
+
+function confirmOccasion() {
+  const name = document.getElementById('occasionNameInput').value.trim();
+  if (!name) { document.getElementById('occasionNameInput').focus(); return; }
+  if (editingId) {
+    getOccasion(editingId).name = name;
+    save(); closeModal(); render();
+  } else {
+    const newOccasion = { id: Date.now().toString(), name, items: [] };
+    data.push(newOccasion);
+    save(); closeModal();
+    selectedId = newOccasion.id;
+    render();
+  }
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+render();
+</script>
+</body>
+</html>
