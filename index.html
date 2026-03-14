@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>カンリイ</title>
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -113,13 +113,15 @@
     .btn-confirm { background: #667eea; color: white; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; cursor: pointer; font-weight: 600; }
 
     /* モバイル */
-    .btn-mobile-back { display: none; background: none; border: none; color: white; cursor: pointer; padding: 4px; margin-right: 8px; display: none; align-items: center; }
+    .btn-mobile-back { background: none; border: none; color: white; cursor: pointer; padding: 4px; margin-right: 8px; display: none; align-items: center; }
     @media (max-width: 640px) {
-      .app { display: block; height: calc(100vh - 52px); overflow: hidden; }
+      /* 高さ: dvh優先（ブラウザUI考慮）、fallback vh */
+      .app { display: block; height: calc(100svh - 52px); overflow: hidden; }
       header { padding: 12px 16px; }
       /* 一覧表示: サイドバーのみ */
       .sidebar { width: 100%; height: 100%; border-right: none; }
-      .main { width: 100%; height: 100%; padding: 16px 16px 80px; }
+      .main { width: 100%; height: 100%; padding: 16px 16px 80px; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
+      .occasion-list { overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
       /* 画面切り替え */
       body:not(.mobile-detail) .main { display: none; }
       body.mobile-detail .sidebar { display: none; }
@@ -131,10 +133,14 @@
       .checkbox-custom { width: 28px; height: 28px; font-size: 15px; }
       .item-delete { opacity: 1; padding: 8px; }
       /* 入力フォームを画面下部に固定 */
-      .add-item-form { position: fixed; bottom: 0; left: 0; right: 0; margin: 0; border-radius: 0; border-top: 1px solid #e8eaf0; padding: 12px 16px; z-index: 100; }
+      .add-item-form { position: fixed; bottom: 0; left: 0; right: 0; margin: 0; border-radius: 0; border-top: 1px solid #e8eaf0; padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 100; }
       body.dark .add-item-form { border-top-color: #2a2d3a; }
-      /* モーダル幅 */
+      /* iOSズーム防止: 全inputを16px以上に */
+      input, textarea, select { font-size: 16px !important; }
+      /* モーダル幅・位置 */
       .modal { width: calc(100vw - 32px); padding: 24px; }
+      .modal-overlay { align-items: flex-end; padding-bottom: env(safe-area-inset-bottom); }
+      .modal { border-radius: 14px 14px 0 0; width: 100%; padding: 24px 24px calc(16px + env(safe-area-inset-bottom)); }
       /* サイドバーのヘッダー */
       .sidebar-header { padding: 16px; }
       .btn-add-occasion { padding: 8px 16px; font-size: 14px; }
@@ -379,6 +385,17 @@ function confirmOccasion() {
 
 document.getElementById('modalOverlay').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// キーボード表示時に固定フォームを押し上げ（iOS対応）
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    const form = document.querySelector('.add-item-form');
+    if (!form) return;
+    if (window.innerWidth > 640) { form.style.bottom = ''; return; }
+    const offset = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
+    form.style.bottom = Math.max(0, offset) + 'px';
+  });
+}
 
 function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
