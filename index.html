@@ -89,7 +89,13 @@
     .btn-add-item:hover { background: #5a6fd8; }
 
     .items-list { display: flex; flex-direction: column; gap: 8px; }
-    .checklist-item { background: white; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); transition: opacity 0.2s; }
+    .checklist-item { background: white; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); transition: opacity 0.2s; border-top: 2px solid transparent; border-bottom: 2px solid transparent; }
+    .drag-handle { color: #ccc; cursor: grab; padding: 2px 4px; display: flex; align-items: center; flex-shrink: 0; touch-action: none; }
+    .drag-handle:active { cursor: grabbing; }
+    body.dark .drag-handle { color: #555; }
+    .checklist-item.dragging { opacity: 0.35; }
+    .checklist-item.drag-over-top { border-top-color: #667eea; }
+    .checklist-item.drag-over-bottom { border-bottom-color: #667eea; }
     .checklist-item.checked { opacity: 0.55; }
     .checkbox-custom { width: 22px; height: 22px; border: 2px solid #d0d3e0; border-radius: 6px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 13px; }
     .checkbox-custom.checked { background: #667eea; border-color: #667eea; color: white; }
@@ -184,6 +190,7 @@
 let data = JSON.parse(localStorage.getItem('kanrii-data') || '[]');
 let selectedId = null;
 let editingId = null;
+let dragIdx = null;
 
 function toggleDark() {
   const isDark = document.body.classList.toggle('dark');
@@ -257,7 +264,8 @@ function renderMain() {
         ${total === 0
           ? '<div class="no-items">持ち物を追加してみよう！</div>'
           : o.items.map((item, idx) => `
-            <div class="checklist-item ${item.checked ? 'checked' : ''}">
+            <div class="checklist-item ${item.checked ? 'checked' : ''}" data-idx="${idx}">
+              <div class="drag-handle"><i data-lucide="grip-vertical" style="width:16px;height:16px"></i></div>
               <div class="checkbox-custom ${item.checked ? 'checked' : ''}" onclick="toggleItem(${idx})">
                 ${item.checked ? '✓' : ''}
               </div>
@@ -282,6 +290,117 @@ function render() {
   lucide.createIcons();
   const bar = document.querySelector('.progress-bar');
   if (bar) requestAnimationFrame(() => { bar.style.width = bar.dataset.pct + '%'; bar.classList.toggle('complete', bar.dataset.pct === '100'); });
+  initDragDrop();
+}
+
+function reorderItems(fromIdx, toIdx) {
+  if (fromIdx === toIdx) return;
+  const o = getOccasion(selectedId);
+  const [moved] = o.items.splice(fromIdx, 1);
+  o.items.splice(toIdx, 0, moved);
+  save(); render();
+}
+
+function getDropTarget(clientY, items, srcIdx) {
+  for (let i = 0; i < items.length; i++) {
+    const r = items[i].getBoundingClientRect();
+    if (clientY >= r.top && clientY <= r.bottom) {
+      const before = clientY < r.top + r.height / 2;
+      let t = before ? i : i + 1;
+      if (srcIdx < t) t--;
+      return t;
+    }
+  }
+  const last = items[items.length - 1];
+  if (last && clientY > last.getBoundingClientRect().bottom) {
+    let t = items.length - 1;
+    if (srcIdx < t) t--;
+    return t;
+  }
+  return srcIdx;
+}
+
+function clearDragOver(items) {
+  items.forEach(i => i.classList.remove('drag-over-top', 'drag-over-bottom'));
+}
+
+function markDragOver(item, clientY) {
+  const r = item.getBoundingClientRect();
+  item.classList.add(clientY < r.top + r.height / 2 ? 'drag-over-top' : 'drag-over-bottom');
+}
+
+function initDragDrop() {
+  const list = document.getElementById('itemsList');
+  if (!list) return;
+  const items = [...list.querySelectorAll('.checklist-item')];
+
+  // Desktop HTML5 DnD
+  items.forEach((item, idx) => {
+    item.draggable = true;
+    item.addEventListener('dragstart', e => {
+      dragIdx = idx;
+      setTimeout(() => item.classList.add('dragging'), 0);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      clearDragOver(items);
+    });
+    item.addEventListener('dragover', e => {
+      e.preventDefault();
+      clearDragOver(items);
+      markDragOver(item, e.clientY);
+    });
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      clearDragOver(items);
+      const t = getDropTarget(e.clientY, items, dragIdx);
+      reorderItems(dragIdx, t);
+    });
+  });
+
+  // Touch DnD
+  items.forEach((item, idx) => {
+    const handle = item.querySelector('.drag-handle');
+    if (!handle) return;
+    handle.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const rect = item.getBoundingClientRect();
+      const touch0 = e.touches[0];
+      const offsetY = touch0.clientY - rect.top;
+
+      const ghost = item.cloneNode(true);
+      ghost.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;z-index:9999;opacity:0.85;pointer-events:none;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.2);`;
+      document.body.appendChild(ghost);
+      item.classList.add('dragging');
+
+      function onMove(e) {
+        e.preventDefault();
+        const t = e.touches[0];
+        ghost.style.top = (t.clientY - offsetY) + 'px';
+        clearDragOver(items);
+        for (const el of items) {
+          const r = el.getBoundingClientRect();
+          if (t.clientY >= r.top && t.clientY <= r.bottom && el !== item) {
+            markDragOver(el, t.clientY); break;
+          }
+        }
+      }
+
+      function onEnd(e) {
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
+        ghost.remove();
+        item.classList.remove('dragging');
+        clearDragOver(items);
+        const t = e.changedTouches[0].clientY;
+        reorderItems(idx, getDropTarget(t, items, idx));
+      }
+
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend', onEnd);
+    }, { passive: false });
+  });
 }
 
 function selectOccasion(id) {
