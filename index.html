@@ -32,7 +32,6 @@
     body.dark .form-group label { color: #aaa; }
     body.dark .btn-cancel { background: #22253a; color: #aaa; }
     body.dark .item-text { color: #e8eaf0; }
-    body.dark .item-text.checked { color: #555; }
     body.dark .checkbox-custom { border-color: #3a3d50; }
     body.dark .item-delete { color: #888; }
     body.dark .empty-state { color: #444; }
@@ -96,11 +95,9 @@
     .checklist-item.dragging { opacity: 0.35; }
     .checklist-item.drag-over-top { border-top-color: #667eea; }
     .checklist-item.drag-over-bottom { border-bottom-color: #667eea; }
-    .checklist-item.checked { opacity: 0.55; }
     .checkbox-custom { width: 22px; height: 22px; border: 2px solid #d0d3e0; border-radius: 6px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 13px; }
     .checkbox-custom.checked { background: #667eea; border-color: #667eea; color: white; }
     .item-text { flex: 1; font-size: 14px; cursor: pointer; user-select: none; }
-    .item-text.checked { text-decoration: line-through; color: #bbb; }
     .item-delete { opacity: 0; background: none; border: none; color: #333; cursor: pointer; padding: 4px; border-radius: 4px; transition: all 0.15s; display: flex; align-items: center; }
     .checklist-item:hover .item-delete { opacity: 1; }
     .item-delete:hover { color: #e74c3c; background: #fdf0f0; }
@@ -428,11 +425,9 @@ function toggleItem(idx) {
   save();
   const item = document.querySelectorAll('.checklist-item')[idx];
   const checked = o.items[idx].checked;
-  item.classList.toggle('checked', checked);
   const box = item.querySelector('.checkbox-custom');
   box.classList.toggle('checked', checked);
   box.textContent = checked ? '✓' : '';
-  item.querySelector('.item-text').classList.toggle('checked', checked);
   const total = o.items.length;
   const doneCount = o.items.filter(i => i.checked).length;
   const pct = total === 0 ? 0 : Math.round(doneCount / total * 100);
