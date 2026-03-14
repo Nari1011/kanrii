@@ -122,7 +122,8 @@
       .occasion-list { overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
       /* メイン: flexで入力欄をキーボード上に固定 */
       .main { width: 100%; height: 100%; padding: 0; display: flex; flex-direction: column; overflow: hidden; }
-      .main-scroll { flex: 1; overflow-y: auto; padding: 16px; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
+      .main-scroll { flex: 1; overflow: hidden; padding: 16px; display: flex; flex-direction: column; }
+      .items-list { flex: 1; overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
       /* 画面切り替え */
       body:not(.mobile-detail) .main { display: none; }
       body.mobile-detail .sidebar { display: none; }
