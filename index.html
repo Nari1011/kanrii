@@ -2,12 +2,12 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>カンリイ</title>
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #1a1a2e; height: 100svh; display: flex; flex-direction: column; overflow: hidden; transition: background 0.2s, color 0.2s; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #1a1a2e; height: 100svh; display: flex; flex-direction: column; transition: background 0.2s, color 0.2s; }
 
     /* ダークモード */
     body.dark { background: #0f1117; color: #e8eaf0; }
@@ -505,10 +505,8 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal()
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', () => {
     if (window.innerWidth > 640) return;
-    const app = document.querySelector('.app');
-    if (!app) return;
-    const keyboardHeight = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
-    app.style.height = `calc(100svh - 52px - ${Math.max(0, keyboardHeight)}px)`;
+    const kbHeight = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
+    document.body.style.height = kbHeight > 50 ? window.visualViewport.height + 'px' : '';
   });
 }
 
